@@ -202,6 +202,92 @@ with tab2:
             # --- SUMMARY STATS ---
             st.markdown("### Summary")
 
+            # counting positives and negatives for summary cards and charts
+            positive_count = (results_df["sentiment"] == "POSITIVE").sum()
+            negative_count = (results_df["sentiment"] == "NEGATIVE").sum()
+
+            # four metric cards — added average confidence as extra insight
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Total reviewed", len(results_df))
+            with col2:
+                st.metric("Positive 😊", positive_count)
+            with col3:
+                st.metric("Negative 😞", negative_count)
+            with col4:
+                # mean() calculates average of the confidence column
+                avg_conf = round(results_df["confidence"].mean(), 1)
+                st.metric("Avg confidence", f"{avg_conf}%")
+
+            st.markdown("---")
+            st.markdown("### Visual breakdown")
+
+            # two charts side by side — pie on left, bar on right
+            chart_col1, chart_col2 = st.columns(2)
+
+            with chart_col1:
+                st.markdown("**Positive vs Negative split**")
+
+                # pie chart showing the ratio of positive to negative
+                # values are the counts, labels are the category names
+                pie_fig = go.Figure(go.Pie(
+                    labels=["Positive", "Negative"],
+                    values=[positive_count, negative_count],
+                    # green for positive, red for negative — consistent with rest of app
+                    marker_colors=["#22c55e", "#ef4444"],
+                    # hole makes it a donut chart — looks more modern
+                    hole=0.4
+                ))
+                pie_fig.update_layout(
+                    height=300,
+                    margin=dict(l=0, r=0, t=10, b=10),
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    showlegend=True
+                )
+                st.plotly_chart(pie_fig, use_container_width=True)
+
+            with chart_col2:
+                st.markdown("**Confidence scores per review**")
+
+                # bar chart showing confidence score of every review
+                # x axis is review number, y axis is confidence percentage
+                # colour coded — green if positive, red if negative
+                bar_colours = [
+                    "#22c55e" if s == "POSITIVE" else "#ef4444"
+                    for s in results_df["sentiment"]
+                ]
+
+                bar_fig = go.Figure(go.Bar(
+                    # review number on x axis — just 1,2,3,4...
+                    x=list(range(1, len(results_df) + 1)),
+                    y=results_df["confidence"],
+                    marker_color=bar_colours,
+                    # showing confidence value on top of each bar
+                    text=results_df["confidence"],
+                    textposition="outside"
+                ))
+                bar_fig.update_layout(
+                    height=300,
+                    xaxis_title="Review number",
+                    yaxis_title="Confidence %",
+                    yaxis=dict(range=[0, 110]),
+                    margin=dict(l=0, r=0, t=10, b=10),
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)"
+                )
+                st.plotly_chart(bar_fig, use_container_width=True)
+
+            st.markdown("---")
+
+            # download button at the bottom — after user has seen all results
+            csv_download = results_df.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="⬇️ Download Results as CSV",
+                data=csv_download,
+                file_name="reviewsense_results.csv",
+                mime="text/csv"
+            )
+
             # counting positives and negatives separately for the summary cards
             # == "POSITIVE" creates a True/False series, .sum() counts the Trues
             positive_count = (results_df["sentiment"] == "POSITIVE").sum()
